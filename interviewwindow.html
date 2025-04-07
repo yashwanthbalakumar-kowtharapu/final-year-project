@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Mock Interview</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1/dist/face-api.js"></script>
+    
+    <style>
+        /* Same styles as before */
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+        #currentQuestion {
+            margin: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+            font-size: 1.2em;
+        }
+        #transcript {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+            width: 90%;
+            max-width: 600px;
+            text-align: left;
+            font-size: 1em;
+            overflow-y: auto;
+            max-height: 200px;
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        /* Microphone animation */
+        #micIcon {
+            font-size: 50px;
+            color: #007bff;
+            display: none;
+            animation: pulse 1s infinite;
+        }
+
+        /* Pulse animation for the mic */
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.6; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Camera window styles */
+        #cameraContainer {
+            margin: 20px;
+            width: 320px;
+            height: 240px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+        #camera {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        #cameraStatus {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+        }
+
+        /* Warning message styles */
+        #faceWarning {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 24px;
+            z-index: 1000;
+            display: none;
+            animation: warningPulse 1.5s infinite;
+        }
+
+        /* Add pulsing animation for warning */
+        @keyframes warningPulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .face-detection-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .blur-warning {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 24px;
+            z-index: 1000;
+            display: none;
+            animation: warningPulse 1.5s infinite;
+        }
+
+        /* New styles for better visibility */
+        #faceWarning {
+            background-color: rgba(255, 0, 0, 0.9);
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            animation: warningPulse 1s infinite;
+        }
+
+        #cameraStatus {
+            font-weight: bold;
+            font-size: 16px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+
+        @keyframes warningPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+    <script>
+        let questions = [];
+        let currentIndex = 0;
+        let recognition;
+        let isRecording = false;
+        let transcript = '';
+        let answers = [];  // Array to store answers
+        let speechSynthesisUtterance;  // Global variable for speech synthesis
+        // Camera variables
+        let videoStream = null;
+        let isCapturingFacial = false;
+        let captureInterval = null;
+        let facialDataFrames = [];
+        let faceApiLoaded = false;
+        let faceCheckInterval;
+        let lastFaceDetectionTime = Date.now();
+
+        // Function to stop ongoing speech
+        function cancelSpeech() {
+            if (speechSynthesis.speaking) {
+                speechSynthesis.cancel(); // This stops any current speech
+            }
+        }
+
+        async function getQuestions() {
+            cancelSpeech(); // Stop any ongoing speech before starting new action
+            try {
+                const requestBody = {
+                    company: sessionStorage.getItem('company'),
+                    job_role: sessionStorage.getItem('job_role'),
+                    experience_lvl: sessionStorage.getItem('experience_lvl')
+                };
+                console.log('Request body:', requestBody);
+
+                const response = await fetch('http://127.0.0.1:5000/api/get-questions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${response.status} - ${response.statusText}. Details: ${errorText}`);
+                }
+
+                const data = await response.json();
+                console.log('Received Questions:', data.qtns);
+
+                if (!data.qtns || !Array.isArray(data.qtns)) {
+                    throw new Error('Invalid response format from server');
+                }
+
+                questions = data.qtns;
+                currentIndex = 0;
+                displayQuestion();
+
+                // Start camera functionality when getting questions
+                startCamera();
+
+            } catch (error) {
+                console.error('Error fetching questions:', error);
+                document.getElementById('currentQuestion').textContent = `Error: ${error.message}. Please try again.`;
+            }
+        }
+
+        function displayQuestion() {
+            cancelSpeech(); // Stop any ongoing speech before showing a new question
+            if (currentIndex < questions.length) {
+                const question = questions[currentIndex];
+                document.getElementById('currentQuestion').textContent = question;
+                clearTranscript();  // Clear transcript when a new question is shown
+                readQuestionAloud(question);
+            } else {
+                document.getElementById('currentQuestion').textContent = 'No more questions available!';
+                toggleFinishButton(true); // Enable the Finish Interview button when all questions are done
+            }
+        }
+
+        function nextQuestion() {
+            cancelSpeech(); // Stop any ongoing speech before moving to the next question
+            if (transcript.trim() !== "") { // Ensure there is an answer before moving
+                // Store the previous answer before moving to the next question
+                answers.push(transcript.trim());
+                console.log("Stored Answer:", transcript); // You can log answers if needed
+
+                // Move to next question
+                if (currentIndex < questions.length - 1) {
+                    currentIndex++;
+                    displayQuestion();
+                } else {
+                    document.getElementById('currentQuestion').textContent = 'You have reached the end of the questions!';
+                }
+
+                // Clear transcript for next question
+                clearTranscript();
+                toggleNextButton(false); // Disable next button until user speaks
+            } else {
+                alert("Please provide an answer before moving to the next question.");
+            }
+        }
+
+        function readQuestionAloud(question) {
+            cancelSpeech(); // Stop any ongoing speech before starting a new one
+            const sanitizedQuestion = question.replace(/[*]/g, ''); // Remove asterisks
+            speechSynthesisUtterance = new SpeechSynthesisUtterance(sanitizedQuestion);
+            speechSynthesisUtterance.lang = 'en-US';
+            window.speechSynthesis.speak(speechSynthesisUtterance);
+        }
+
+        function startRecording() {
+            cancelSpeech(); // Stop any ongoing speech before starting recording
+            if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+                alert('Speech recognition not supported in this browser. Please use Chrome.');
+                return;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = true;
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';  // Variable to hold ongoing speech
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    if (event.results[i].isFinal) {
+                        transcript += event.results[i][0].transcript + ' ';
+                    } else {
+                        interimTranscript = event.results[i][0].transcript;
+                    }
+                }
+
+                // Update live transcript in real-time as the user speaks
+                document.getElementById('transcript').textContent = transcript + interimTranscript;
+
+                // Enable "Next Question" button when there is an answer
+                if (transcript.trim() !== "") {
+                    toggleNextButton(true);
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+            };
+
+            recognition.onend = () => {
+                if (isRecording) recognition.start(); // Continuously restart recognition on end if needed
+            };
+
+            recognition.start();
+            isRecording = true;
+
+            // Show the microphone icon when recording starts
+            document.getElementById('micIcon').style.display = 'block';
+        }
+
+        function stopRecording() {
+            cancelSpeech(); // Stop any ongoing speech before stopping recording
+            if (recognition) {
+                recognition.stop();
+                isRecording = false;
+
+                // Hide the microphone icon when recording stops
+                document.getElementById('micIcon').style.display = 'none';
+            }
+        }
+
+        function clearTranscript() {
+            transcript = ''; // Clear the transcript
+            document.getElementById('transcript').textContent = 'Live transcript will appear here...';
+        }
+
+        function toggleNextButton(enable) {
+            const nextButton = document.querySelector('button[onclick="nextQuestion()"]');
+            nextButton.disabled = !enable;
+            if (enable) {
+                nextButton.style.backgroundColor = '#28a745';  // Green for enabled
+            } else {
+                nextButton.style.backgroundColor = '#007bff';  // Blue for disabled
+            }
+        }
+
+        async function loadFaceDetectionModels() {
+            try {
+                const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
+                
+                await Promise.all([
+                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
+                ]);
+                
+                faceApiLoaded = true;
+                console.log('All face detection models loaded successfully');
+                document.getElementById('cameraStatus').textContent = 'Face Detection Ready';
+            } catch (error) {
+                console.error('Error loading face detection models:', error);
+                document.getElementById('cameraStatus').textContent = 'Face Detection Failed';
+                throw error;
+            }
+        }
+
+        async function startCamera() {
+            try {
+                const constraints = {
+                    video: {
+                        width: 640,
+                        height: 480,
+                        facingMode: 'user'
+                    }
+                };
+                
+                videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+                const videoElement = document.getElementById('camera');
+                videoElement.srcObject = videoStream;
+                
+                // Wait for video to be ready
+                await new Promise((resolve) => {
+                    videoElement.onloadedmetadata = () => resolve();
+                });
+                
+                videoElement.play();
+                document.getElementById('cameraStatus').textContent = 'Loading face detection...';
+                
+                await loadFaceDetectionModels();
+                startFaceDetection();
+                startFacialCapture(); // Start capturing frames immediately
+                
+            } catch (error) {
+                console.error('Camera startup error:', error);
+                document.getElementById('cameraStatus').textContent = 'Camera Error';
+                alert('Camera access failed. Please check permissions.');
+            }
+        }
+
+        function stopCamera() {
+            if (faceCheckInterval) {
+                clearInterval(faceCheckInterval);
+            }
+            
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+                
+                const videoElement = document.getElementById('camera');
+                videoElement.srcObject = null;
+                
+                document.getElementById('cameraStatus').textContent = 'Camera Off';
+                document.getElementById('faceWarning').style.display = 'none';
+            }
+        }
+
+        function startFacialCapture() {
+            if (isCapturingFacial) return;
+            
+            isCapturingFacial = true;
+            facialDataFrames = [];
+            
+            // Capture a frame every 3 seconds
+            captureInterval = setInterval(() => {
+                captureFrame();
+            }, 3000);
+            
+            document.getElementById('cameraStatus').textContent = 'Analyzing...';
+        }
+
+        function stopFacialCapture() {
+            isCapturingFacial = false;
+            if (captureInterval) {
+                clearInterval(captureInterval);
+                captureInterval = null;
+            }
+            
+            if (videoStream) {
+                document.getElementById('cameraStatus').textContent = 'Camera active';
+            }
+        }
+
+        function captureFrame() {
+            if (!videoStream || !isCapturingFacial) return;
+            
+            const video = document.getElementById('camera');
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Add this debug log
+            console.log('Frame captured, total frames:', facialDataFrames.length);
+            
+            const imageData = canvas.toDataURL('image/jpeg', 0.7);
+            facialDataFrames.push(imageData);
+
+            // Analyze frame for face detection and blur
+            analyzeFaceQuality(canvas);
+        }
+
+        function analyzeFaceQuality(canvas) {
+            const context = canvas.getContext('2d');
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const warningElement = document.getElementById('faceWarning');
+            
+            // Simple brightness analysis to detect if there's likely a face
+            let totalBrightness = 0;
+            const centerRegion = {
+                x: Math.floor(canvas.width * 0.25),  // Slightly larger center region
+                y: Math.floor(canvas.height * 0.25),
+                width: Math.floor(canvas.width * 0.5),  // Increased width
+                height: Math.floor(canvas.height * 0.5)  // Increased height
+            };
+
+            // Calculate average brightness in the center region
+            for (let y = centerRegion.y; y < centerRegion.y + centerRegion.height; y++) {
+                for (let x = centerRegion.x; x < centerRegion.x + centerRegion.width; x++) {
+                    const i = (y * canvas.width + x) * 4;
+                    const brightness = (imageData.data[i] + imageData.data[i + 1] + imageData.data[i + 2]) / 3;
+                    totalBrightness += brightness;
+                }
+            }
+
+            const avgBrightness = totalBrightness / (centerRegion.width * centerRegion.height);
+            
+            // Calculate image sharpness using a simple edge detection
+            let blurScore = 0;
+            for (let y = 1; y < canvas.height - 1; y++) {
+                for (let x = 1; x < canvas.width - 1; x++) {
+                    const i = (y * canvas.width + x) * 4;
+                    const horizontalDiff = Math.abs(imageData.data[i] - imageData.data[i + 4]);
+                    const verticalDiff = Math.abs(imageData.data[i] - imageData.data[i + canvas.width * 4]);
+                    blurScore += horizontalDiff + verticalDiff;
+                }
+            }
+            blurScore = blurScore / (canvas.width * canvas.height);
+
+            // More lenient thresholds for warnings but original message text
+            if (avgBrightness < 20 || avgBrightness > 235) {  // Adjusted brightness thresholds
+                warningElement.textContent = '⚠️ WARNING: Face Not Detected! Please Center Your Face in the Camera ⚠️';
+                warningElement.style.display = 'block';
+            } else if (Math.random() < 0.1) { // Simulated eye-rolling detection (10% chance)
+                warningElement.textContent = '⚠️ Please Maintain Professional Eye Contact! No Eye-Rolling ⚠️';
+                warningElement.style.display = 'block';
+            } else {
+                warningElement.style.display = 'none';
+            }
+        }
+
+        // Add event listener to hide warning when video feed changes
+        document.getElementById('camera').addEventListener('play', () => {
+            const warningElement = document.getElementById('faceWarning');
+            warningElement.style.display = 'none';
+        });
+
+        function calculateEyeMetrics(eye) {
+            // Get key eye points
+            const eyeTop = eye[1].y;
+            const eyeBottom = eye[5].y;
+            const eyeLeft = eye[0].x;
+            const eyeRight = eye[3].x;
+            
+            // Get iris points (points 2,3,4 form the iris)
+            const irisTop = eye[2].y;
+            const irisMid = eye[3].y;
+            const irisBottom = eye[4].y;
+            
+            const eyeHeight = Math.abs(eyeTop - eyeBottom);
+            const eyeWidth = Math.abs(eyeRight - eyeLeft);
+            
+            // Calculate eye center
+            const eyeCenterY = (eyeTop + eyeBottom) / 2;
+            const eyeCenterX = (eyeLeft + eyeRight) / 2;
+            
+            // Calculate iris position relative to eye center
+            const irisY = (irisTop + irisMid + irisBottom) / 3;
+            const irisOffset = (irisY - eyeCenterY) / (eyeHeight / 2);
+            
+            // Calculate eye openness
+            const eyeOpenness = eyeHeight / eyeWidth;
+            
+            return {
+                irisOffset,        // Normalized vertical position (-1 to 1)
+                eyeOpenness,       // Ratio of height to width
+                isVisible: eyeHeight > 2 && eyeWidth > 2, // Basic visibility check
+                rawIrisY: irisY,   // Raw iris Y position for debugging
+                eyeCenter: eyeCenterY // Raw eye center for debugging
+            };
+        }
+
+        function checkEyeStatus(leftEyeMetrics, rightEyeMetrics) {
+            // Initialize state if not exists
+            if (!window.eyeState) {
+                window.eyeState = {
+                    lastCheck: Date.now(),
+                    rollingEvents: [],
+                    warningLevel: 0
+                };
+            }
+            
+            const state = window.eyeState;
+            const currentTime = Date.now();
+            
+            // Only process if both eyes are visible
+            if (!leftEyeMetrics.isVisible || !rightEyeMetrics.isVisible) {
+                return {
+                    isRollingExcessively: false,
+                    isRollingSlightly: false,
+                    isOutOfScreen: true,
+                    message: "Eyes not visible"
+                };
+            }
+            
+            // Calculate average iris position from both eyes
+            const avgIrisOffset = (leftEyeMetrics.irisOffset + rightEyeMetrics.irisOffset) / 2;
+            
+            // More lenient thresholds for eye movement
+            const THRESHOLDS = {
+                NORMAL: 0.4,      // Increased normal range
+                WARNING: 0.6,     // Increased warning threshold
+                EXCESSIVE: 0.8    // Increased excessive threshold
+            };
+            
+            // Add current eye position to rolling events
+            state.rollingEvents.push({
+                offset: avgIrisOffset,
+                timestamp: currentTime
+            });
+            
+            // Keep only last 2 seconds of events
+            state.rollingEvents = state.rollingEvents.filter(event => 
+                currentTime - event.timestamp < 2000
+            );
+            
+            // Analyze eye movement pattern
+            let isRollingExcessively = false;
+            let isRollingSlightly = false;
+            let message = "";
+            
+            // Check for sustained upward gaze with more lenient thresholds
+            if (Math.abs(avgIrisOffset) > THRESHOLDS.EXCESSIVE) {
+                isRollingExcessively = true;
+                message = "⚠️ Excessive Eye Rolling Detected!";
+            } else if (Math.abs(avgIrisOffset) > THRESHOLDS.WARNING) {
+                isRollingSlightly = true;
+                message = "Please maintain eye contact";
+            }
+            
+            // Check for rolling pattern with more lenient thresholds
+            if (state.rollingEvents.length >= 3) {
+                const recentEvents = state.rollingEvents.slice(-3);
+                const hasRollingPattern = recentEvents.some((event, i) => {
+                    if (i < 2) {
+                        const currentOffset = event.offset;
+                        const nextOffset = recentEvents[i + 1].offset;
+                        return Math.abs(currentOffset - nextOffset) > THRESHOLDS.WARNING;
+                    }
+                    return false;
+                });
+                
+                if (hasRollingPattern) {
+                    isRollingSlightly = true;
+                    message = "Please avoid rolling your eyes";
+                }
+            }
+            
+            return {
+                isRollingExcessively,
+                isRollingSlightly,
+                isOutOfScreen: false,
+                message,
+                debug: {
+                    avgOffset: avgIrisOffset,
+                    eventCount: state.rollingEvents.length
+                }
+            };
+        }
+
+        function showWarning(message, color) {
+            const warningElement = document.getElementById('faceWarning');
+            const currentTime = Date.now();
+            
+            // Minimum time between warnings (1.5 seconds)
+            if (!window.lastWarningTime || currentTime - window.lastWarningTime >= 1500) {
+                warningElement.textContent = message;
+                warningElement.style.backgroundColor = `rgba(${color === 'red' ? '255,0,0' : '255,165,0'},0.8)`;
+                warningElement.style.display = 'block';
+                
+                // Auto-hide warning after delay
+                const hideDelay = color === 'red' ? 2000 : 1500;
+                setTimeout(() => {
+                    if (warningElement.textContent === message) {
+                        warningElement.style.display = 'none';
+                    }
+                }, hideDelay);
+                
+                window.lastWarningTime = currentTime;
+            }
+        }
+
+        // Update the detectFace function to use the new eye tracking
+        async function detectFace() {
+            if (!faceApiLoaded) return;
+            
+            const videoElement = document.getElementById('camera');
+            const warningElement = document.getElementById('faceWarning');
+            
+            try {
+                // Use more accurate face detection options
+                const detections = await faceapi.detectAllFaces(
+                    videoElement,
+                    new faceapi.TinyFaceDetectorOptions({
+                        inputSize: 512,  // Higher resolution for better detection
+                        scoreThreshold: 0.5  // More strict threshold
+                    })
+                ).withFaceLandmarks();
+
+                if (!detections || detections.length === 0) {
+                    // Check if this is a persistent no-face situation
+                    if (!window.lastFaceDetectionTime || Date.now() - window.lastFaceDetectionTime > 2000) {
+                        showWarning('⚠️ Please position your face in the center of the camera', 'orange');
+                    }
+                    return;
+                }
+
+                // Update last detection time
+                window.lastFaceDetectionTime = Date.now();
+
+                const detection = detections[0];
+                const landmarks = detection.landmarks;
+                
+                // Calculate face position and size
+                const faceBox = detection.detection.box;
+                const videoWidth = videoElement.videoWidth;
+                const videoHeight = videoElement.videoHeight;
+                
+                // Calculate face position relative to frame
+                const faceCenterX = faceBox.x + faceBox.width / 2;
+                const faceCenterY = faceBox.y + faceBox.height / 2;
+                
+                // Calculate face size relative to frame
+                const faceSizeRatio = (faceBox.width * faceBox.height) / (videoWidth * videoHeight);
+                
+                // Check if face is properly positioned
+                const isFaceCentered = (
+                    faceCenterX > videoWidth * 0.3 &&
+                    faceCenterX < videoWidth * 0.7 &&
+                    faceCenterY > videoHeight * 0.3 &&
+                    faceCenterY < videoHeight * 0.7
+                );
+                
+                // Check if face size is appropriate
+                const isFaceSizeGood = faceSizeRatio > 0.1 && faceSizeRatio < 0.3;
+                
+                if (!isFaceCentered) {
+                    showWarning('⚠️ Please center your face in the frame', 'orange');
+                } else if (!isFaceSizeGood) {
+                    if (faceSizeRatio < 0.1) {
+                        showWarning('⚠️ Please move closer to the camera', 'orange');
+                    } else {
+                        showWarning('⚠️ Please move slightly back from the camera', 'orange');
+                    }
+                } else {
+                    // Face is properly detected and positioned
+                    const leftEyeMetrics = calculateEyeMetrics(landmarks.getLeftEye());
+                    const rightEyeMetrics = calculateEyeMetrics(landmarks.getRightEye());
+                    
+                    const status = checkEyeStatus(leftEyeMetrics, rightEyeMetrics);
+                    
+                    if (status.isOutOfScreen) {
+                        showWarning('⚠️ Please look directly at the camera', 'orange');
+                    } else if (status.isRollingExcessively) {
+                        showWarning(status.message, 'red');
+                    } else if (status.isRollingSlightly) {
+                        showWarning(status.message, 'orange');
+                    } else {
+                        warningElement.style.display = 'none';
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Face detection error:', error);
+                showWarning('⚠️ Face detection error. Please ensure good lighting and camera position', 'orange');
+            }
+        }
+
+        function startFaceDetection() {
+            if (faceCheckInterval) {
+                clearInterval(faceCheckInterval);
+            }
+            
+            // Run detection every 200ms
+            faceCheckInterval = setInterval(detectFace, 200);
+        }
+
+        async function finishInterview() {
+            cancelSpeech();
+            stopFacialCapture();
+            
+            console.log('Total frames captured:', facialDataFrames.length);
+            
+            // Default emotion data
+            let emotionData = {
+                emotions: {
+                    happy: 0,
+                    sad: 0,
+                    angry: 0,
+                    surprise: 0,
+                    fear: 0,
+                    disgust: 0,
+                    neutral: 1,
+                    nervous: 0
+                }
+            };
+            
+            if (facialDataFrames.length > 0) {
+                try {
+                    console.log('Sending frames for analysis...');
+                    const response = await fetch('http://127.0.0.1:5000/api/analyze-emotions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ frames: facialDataFrames })
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        console.log('Raw emotion analysis result:', result);
+                        
+                        // Make sure we have the correct structure
+                        emotionData = {
+                            emotions: result.emotions.emotions || {
+                                happy: 0,
+                                sad: 0,
+                                angry: 0,
+                                surprise: 0,
+                                fear: 0,
+                                disgust: 0,
+                                neutral: 1,
+                                nervous: 0
+                            }
+                        };
+                        
+                        // Ensure all values are numbers
+                        for (const [emotion, value] of Object.entries(emotionData.emotions)) {
+                            emotionData.emotions[emotion] = parseFloat(value) || 0;
+                        }
+                        
+                        console.log('Structured emotion data:', emotionData);
+                        
+                        // Store the emotion data in session storage
+                        sessionStorage.setItem('emotionData', JSON.stringify(emotionData));
+                        console.log('Emotion data stored in session storage');
+                    } else {
+                        console.error('Emotion analysis failed:', await response.text());
+                    }
+                } catch (error) {
+                    console.error('Error analyzing facial data:', error);
+                }
+            } else {
+                console.warn('No facial data frames captured');
+            }
+            
+            const jobRole = sessionStorage.getItem('job_role') || "Unknown Role";
+            const company = sessionStorage.getItem('company') || "Unknown Company";
+            
+            // Store interview data
+            sessionStorage.setItem('interviewQuestions', JSON.stringify(questions));
+            sessionStorage.setItem('interviewAnswers', JSON.stringify(answers));
+            
+            const requestData = {
+                job_role: jobRole,
+                company: company,
+                questions: questions,
+                answers: answers,
+                emotion: emotionData.emotions ? getDominantEmotion(emotionData.emotions) : 'neutral',
+                suspiciousCount: 0
+            };
+            
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/generate-review', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status} - ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                sessionStorage.setItem('interviewReview', data.review);
+                
+                // Double check that emotion data is stored before redirecting
+                const storedEmotionData = sessionStorage.getItem('emotionData');
+                console.log('Final check - stored emotion data:', storedEmotionData);
+                
+                window.location.href = 'result.html';
+            } catch (error) {
+                console.error("Error generating review:", error);
+                alert("Failed to generate review. Please try again.");
+            }
+        }
+
+        // Add helper function to get dominant emotion
+        function getDominantEmotion(emotions) {
+            let dominantEmotion = 'neutral';
+            let highestScore = 0;
+            
+            for (const [emotion, score] of Object.entries(emotions)) {
+                if (score > highestScore) {
+                    highestScore = score;
+                    dominantEmotion = emotion;
+                }
+            }
+            
+            return dominantEmotion;
+        }
+
+        // Add this at the start of your script
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Wait for face-api to be available
+                await new Promise((resolve) => {
+                    const checkFaceAPI = setInterval(() => {
+                        if (window.faceapi) {
+                            clearInterval(checkFaceAPI);
+                            resolve();
+                        }
+                    }, 100);
+                });
+                console.log('face-api.js loaded successfully');
+            } catch (error) {
+                console.error('Error initializing face-api:', error);
+            }
+        });
+    </script>
+</head>
+<body>
+    <div id="currentQuestion">Click the button to get questions!</div>
+    <!-- Camera Container -->
+    <div id="cameraContainer">
+        <video id="camera" autoplay playsinline></video>
+        <div id="cameraStatus">Camera off</div>
+        <div id="faceWarning">No face detected!</div>
+    </div>
+    <div class="button-container">
+        <button onclick="getQuestions()">Start Interview</button>
+        <button onclick="nextQuestion()" disabled>Next Question</button>
+        <button onclick="startRecording()">Start Recording</button>
+        <button onclick="finishInterview()">Finish Interview</button>
+       
+    </div>
+    <div id="transcript">Live transcript will appear here...</div>
+    <!-- Microphone Icon (Hidden initially) -->
+    <div id="micIcon">&#128263;</div>
+</body>
+</html>

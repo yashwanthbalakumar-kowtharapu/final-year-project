@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Mock Interview - Main</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* General Reset and Styling */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0066ff, #ffffff);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            color: #0066ff;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .profile-icon {
+            width: 40px;
+            height: 40px;
+            background: #0066ff;
+            border-radius: 50%;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .profile-menu {
+            display: none;
+            position: absolute;
+            top: 50px;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 10px;
+            z-index: 1000;
+            width: 150px;
+        }
+
+        .profile-menu button {
+            background: #0066ff;
+            color: white;
+            padding: 8px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .profile-menu button:hover {
+            background: #003399;
+        }
+
+        main {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .welcome-message {
+            font-size: 20px;
+            color: white;
+            background: #0066ff;
+            margin-bottom: 30px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .interview-setup {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .selection-group {
+            margin: 20px 0;
+            position: relative;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #0066ff;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .start-button {
+            background: #0066ff;
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .start-button:hover {
+            background: #003399;
+            transform: translateY(-2px);
+        }
+
+        footer {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            text-align: center;
+        }
+
+        .social-icons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .social-icons a {
+            color: #0066ff;
+            font-size: 24px;
+            transition: color 0.3s ease;
+        }
+
+        .social-icons a:hover {
+            color: #003399;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">AI Mock Interview</div>
+    </header>
+
+    <main>
+        <h2 style="color: white; text-align: center; margin-bottom: 30px;">Set Up Your Interview</h2>
+        <div class="interview-setup">
+            <div class="selection-group">
+                <label for="companySelect">Select Company:</label>
+                <select id="companySelect" aria-label="Company Select">
+                    <option value="">Select Company</option>
+                </select>
+            </div>
+
+            <div class="selection-group">
+                <label for="roleSelect">Select Role:</label>
+                <select id="roleSelect" aria-label="Role Select">
+                    <option value="">Select Role</option>
+                </select>
+            </div>
+
+            <div class="selection-group">
+                <label for="experienceSelect">Experience Level:</label>
+                <select id="experienceSelect" aria-label="Experience Level Select">
+                    <option value="Entry Level">Entry Level</option>
+                    <option value="Mid Level">Mid Level</option>
+                    <option value="Senior Level">Senior Level</option>
+                </select>
+            </div>
+
+            <div style="text-align: center;">
+                <button class="start-button" onclick="startInterview()">Start Interview</button>
+            </div>
+        </div>
+        <script>
+        
+            const companies = [
+                'Google', 'Microsoft', 'Amazon', 'Apple', 'Meta', 'Netflix',
+                'Accenture', 'Infosys', 'TCS', 'Wipro', 'HCL Technologies', 'Other'
+            ];
+
+            const roles = [
+                'Frontend', 'Backend', 'Full Stack', 'Mobile', 'DevOps', 'Cloud Engineer', 
+                'Embedded Systems', 'Game Developer', 'Test Engineer', 'Machine Learning', 
+                'Data Analytics', 'Research', 'AI Engineer', 'Business Intelligence Analyst', 
+                'Big Data Specialist', 'Technical PM', 'Non-Technical PM', 'Agile Scrum Master', 
+                'Product Analyst', 'Visual Designer', 'Interaction Designer', 
+                'Prototyping Specialist', 'Accessibility Expert', 'Security Analyst', 
+                'Penetration Tester', 'SOC Analyst', 'Threat Hunter', 'Other'
+            ];
+
+            const companySelect = document.getElementById('companySelect');
+            const roleSelect = document.getElementById('roleSelect');
+
+            companies.forEach(company => {
+                const option = document.createElement('option');
+                option.value = company;
+                option.textContent = company;
+                companySelect.appendChild(option);
+            });
+
+            roles.forEach(role => {
+                const option = document.createElement('option');
+                option.value = role;
+                option.textContent = role;
+                roleSelect.appendChild(option);
+            });
+
+            companySelect.addEventListener('change', () => {
+                if (companySelect.value === 'Other') {
+                    const customCompany = prompt('Enter custom company:');
+                    if (customCompany) {
+                        const customOption = document.createElement('option');
+                        customOption.value = customCompany;
+                        customOption.textContent = customCompany;
+                        companySelect.appendChild(customOption);
+                        companySelect.value = customCompany;
+                    }
+                }
+            });
+
+            roleSelect.addEventListener('change', () => {
+                if (roleSelect.value === 'Other') {
+                    const customRole = prompt('Enter custom role:');
+                    if (customRole) {
+                        const customOption = document.createElement('option');
+                        customOption.value = customRole;
+                        customOption.textContent = customRole;
+                        roleSelect.appendChild(customOption);
+                        roleSelect.value = customRole;
+                    }
+                }
+            });
+
+            function startInterview() {
+                const company = document.getElementById('companySelect').value;
+                const role = document.getElementById('roleSelect').value;
+                const experience = document.getElementById('experienceSelect').value;
+
+                if (!company || !role) {
+                    alert('Please select both company and role before starting the interview.');
+                    return;
+                }
+
+                // Store the selections in sessionStorage
+                sessionStorage.setItem('company', company);
+                sessionStorage.setItem('job_role', role);
+                sessionStorage.setItem('experience_lvl', experience);
+
+                // Navigate to the interview window
+                window.location.href = '/interview';
+            }
+        </script>
+    </main>
+
+    <footer>
+        <div class="social-icons">
+            <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin"></i></a>
+            <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+            <a href="#" aria-label="GitHub"><i class="fab fa-github"></i></a>
+            <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+        </div>
+    </footer>
+</body>
+</html>

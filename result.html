@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interview Review</title>
+    <!-- Add Chart.js for emotion visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #3b82f6;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --text-color: #1f2937;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px;
+            background-color: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h1, h2, h3, h4 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 1.5em;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 0.5em;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .review-content {
+            white-space: pre-line;
+            font-size: 1.1em;
+            line-height: 1.8;
+            padding: 25px;
+            background-color: var(--bg-color);
+            border-radius: 15px;
+            margin-bottom: 40px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .emotion-section {
+            margin-top: 40px;
+            padding: 30px;
+            background-color: var(--bg-color);
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .emotion-chart-container {
+            height: 400px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: var(--card-bg);
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .emotion-description {
+            padding: 25px;
+            background-color: var(--card-bg);
+            border-left: 5px solid var(--primary-color);
+            margin-top: 30px;
+            border-radius: 0 15px 15px 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .dominant-emotion {
+            font-weight: 600;
+            color: var(--primary-color);
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .no-data {
+            text-align: center;
+            font-style: italic;
+            color: #6b7280;
+            padding: 30px;
+        }
+
+        .question-feedback {
+            margin: 25px 0;
+            padding: 25px;
+            background-color: var(--bg-color);
+            border-radius: 15px;
+            border-left: 5px solid var(--success-color);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+        }
+
+        .question-feedback:hover {
+            transform: translateY(-5px);
+        }
+
+        .question-text {
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .answer-text {
+            font-style: italic;
+            margin-bottom: 15px;
+            color: #4b5563;
+            padding: 15px;
+            background-color: var(--card-bg);
+            border-radius: 10px;
+        }
+
+        .feedback-text {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .strengths-weaknesses {
+            margin: 30px 0;
+            padding: 25px;
+            background-color: var(--bg-color);
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .strengths {
+            color: var(--success-color);
+            padding: 20px;
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .weaknesses {
+            color: var(--danger-color);
+            padding: 20px;
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .recommendation {
+            margin: 30px 0;
+            padding: 25px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 15px;
+            font-weight: 500;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .recommendation h4 {
+            color: white;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .emotion-chart-container {
+                height: 300px;
+            }
+        }
+
+        /* Animation for loading content */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .container > * {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        .insufficient-data {
+            padding: 30px;
+            background-color: var(--bg-color);
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .warning-message {
+            background-color: var(--card-bg);
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .warning-message h3 {
+            color: var(--warning-color);
+            margin-bottom: 15px;
+        }
+
+        .suggestions {
+            background-color: var(--card-bg);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .suggestions h4 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        .suggestions ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .suggestions li {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--bg-color);
+        }
+
+        .suggestions li:last-child {
+            border-bottom: none;
+        }
+    </style>
+    <script>
+        function getEmotionDescription(dominantEmotion) {
+            const descriptions = {
+                'happy': 'You displayed positive emotions during the interview, showing enthusiasm and engagement. This is generally viewed positively by interviewers.',
+                'neutral': 'You maintained a balanced, neutral expression throughout the interview. While professional, consider adding more enthusiasm for key topics.',
+                'sad': 'You appeared somewhat downcast during the interview. Consider projecting more positive energy in future interviews.',
+                'angry': 'You displayed signs of frustration or tension. Try to practice remaining calm, even when discussing challenging topics.',
+                'surprise': 'You showed expressions of surprise during the interview. This might indicate you were caught off-guard by some questions.',
+                'fear': 'You exhibited signs of nervousness. Remember that some anxiety is normal, but deep breathing exercises can help maintain composure.',
+                'disgust': 'Your expressions showed discomfort with certain topics. Be mindful of maintaining a neutral expression when discussing challenging subjects.',
+                'nervous': 'You appeared noticeably nervous during the interview. Consider practicing more mock interviews to build confidence.'
+            };
+            
+            return descriptions[dominantEmotion] || 'Your emotional expressions varied during the interview. Consider how your facial expressions might be perceived by interviewers.';
+        }
+        
+        function renderEmotionChart(emotions) {
+            const ctx = document.getElementById('emotionChart');
+            if (!ctx) {
+                console.error('Chart canvas not found');
+                return;
+            }
+
+            // Ensure we have a valid context
+            const chartContext = ctx.getContext('2d');
+            if (!chartContext) {
+                console.error('Could not get 2D context');
+                return;
+            }
+
+            // Ensure emotions is an object with numeric values
+            const processedEmotions = {};
+            for (const [emotion, value] of Object.entries(emotions)) {
+                processedEmotions[emotion] = parseFloat(value) || 0;
+            }
+
+            // Create the chart
+            new Chart(chartContext, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(processedEmotions),
+                    datasets: [{
+                        label: 'Emotion Analysis',
+                        data: Object.values(processedEmotions),
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.7)',   // red (angry)
+                            'rgba(54, 162, 235, 0.7)',   // blue (sad)
+                            'rgba(255, 206, 86, 0.7)',   // yellow (surprise)
+                            'rgba(75, 192, 192, 0.7)',   // green (happy)
+                            'rgba(153, 102, 255, 0.7)',  // purple (fear)
+                            'rgba(255, 159, 64, 0.7)',   // orange (disgust)
+                            'rgba(201, 203, 207, 0.7)',  // gray (neutral)
+                            'rgba(0, 128, 0, 0.7)'       // dark green (nervous)
+                        ],
+                        borderColor: [
+                            'rgb(255, 99, 132)',
+                            'rgb(54, 162, 235)',
+                            'rgb(255, 206, 86)',
+                            'rgb(75, 192, 192)',
+                            'rgb(153, 102, 255)',
+                            'rgb(255, 159, 64)',
+                            'rgb(201, 203, 207)',
+                            'rgb(0, 128, 0)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 1,
+                            title: {
+                                display: true,
+                                text: 'Confidence Score'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Emotions'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Your Emotional Expression During Interview',
+                            font: {
+                                size: 16
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function getDominantEmotion(emotions) {
+            let dominantEmotion = 'neutral';
+            let highestScore = 0;
+            
+            for (const [emotion, score] of Object.entries(emotions)) {
+                if (score > highestScore) {
+                    highestScore = score;
+                    dominantEmotion = emotion;
+                }
+            }
+            
+            return dominantEmotion;
+        }
+        
+        function displayQuestionFeedback(questions, answers, review) {
+            const feedbackContainer = document.createElement('div');
+            feedbackContainer.className = 'feedback-container';
+            
+            // Check if answers are insufficient
+            const hasInsufficientAnswers = answers.some(answer => !answer || answer.trim().length < 10);
+            
+            if (hasInsufficientAnswers) {
+                const insufficientDiv = document.createElement('div');
+                insufficientDiv.className = 'insufficient-data';
+                insufficientDiv.innerHTML = `
+                    <div class="warning-message">
+                        <h3>Insufficient Data for Complete Review</h3>
+                        <p>The provided answers are too brief to provide a thorough analysis. For a meaningful evaluation, please provide more detailed responses to the interview questions.</p>
+                    </div>
+                    <div class="suggestions">
+                        <h4>Tips for Better Answers:</h4>
+                        <ul>
+                            <li>Provide specific examples from your experience</li>
+                            <li>Include quantifiable results and metrics</li>
+                            <li>Explain your thought process and decision-making</li>
+                            <li>Describe challenges faced and how you overcame them</li>
+                        </ul>
+                    </div>
+                `;
+                feedbackContainer.appendChild(insufficientDiv);
+                return feedbackContainer;
+            }
+            
+            // Parse the review text to extract question-specific feedback
+            const reviewLines = review.split('\n');
+            let currentQuestionIndex = -1;
+            
+            questions.forEach((question, index) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'question-feedback';
+                
+                const answer = answers[index] || 'No answer provided';
+                const feedback = getQuestionFeedback(reviewLines, index);
+                
+                questionDiv.innerHTML = `
+                    <div class="question-text">Question ${index + 1}: ${question}</div>
+                    <div class="answer-text">Your Answer: ${answer}</div>
+                    <div class="feedback-text">${feedback}</div>
+                `;
+                
+                feedbackContainer.appendChild(questionDiv);
+            });
+            
+            // Add overall performance section
+            const overallDiv = document.createElement('div');
+            overallDiv.className = 'strengths-weaknesses';
+            
+            const strengths = extractSection(reviewLines, 'Strengths:');
+            const weaknesses = extractSection(reviewLines, 'Areas for Improvement:');
+            const recommendation = extractSection(reviewLines, 'Recommendation:');
+            
+            overallDiv.innerHTML = `
+                <h3>Overall Performance Analysis</h3>
+                <div class="strengths">
+                    <h4>Strengths</h4>
+                    <p>${strengths}</p>
+                </div>
+                <div class="weaknesses">
+                    <h4>Areas for Improvement</h4>
+                    <p>${weaknesses}</p>
+                </div>
+                <div class="recommendation">
+                    <h4>Final Recommendation</h4>
+                    <p>${recommendation}</p>
+                </div>
+            `;
+            
+            feedbackContainer.appendChild(overallDiv);
+            return feedbackContainer;
+        }
+
+        function getQuestionFeedback(reviewLines, questionIndex) {
+            const startMarker = `Question ${questionIndex + 1}:`;
+            const endMarker = questionIndex + 1 < reviewLines.length ? `Question ${questionIndex + 2}:` : 'Strengths:';
+            
+            let feedback = '';
+            let foundStart = false;
+            
+            for (const line of reviewLines) {
+                if (line.includes(startMarker)) {
+                    foundStart = true;
+                    continue;
+                }
+                if (foundStart && line.includes(endMarker)) {
+                    break;
+                }
+                if (foundStart) {
+                    // Remove any placeholder text or special characters
+                    const cleanLine = line.replace(/\[.*?\]/g, '').replace(/\*/g, '');
+                    if (cleanLine.trim()) {
+                        feedback += cleanLine + '\n';
+                    }
+                }
+            }
+            
+            return feedback.trim() || 'No specific feedback available for this question.';
+        }
+
+        function extractSection(reviewLines, sectionMarker) {
+            let section = '';
+            let foundMarker = false;
+            
+            for (const line of reviewLines) {
+                if (line.includes(sectionMarker)) {
+                    foundMarker = true;
+                    continue;
+                }
+                if (foundMarker && (line.includes('Strengths:') || line.includes('Areas for Improvement:') || line.includes('Recommendation:'))) {
+                    break;
+                }
+                if (foundMarker) {
+                    // Remove any placeholder text or special characters
+                    const cleanLine = line.replace(/\[.*?\]/g, '').replace(/\*/g, '');
+                    if (cleanLine.trim()) {
+                        section += cleanLine + '\n';
+                    }
+                }
+            }
+            
+            return section.trim() || 'No information available.';
+        }
+        
+        window.onload = function () {
+            // Create container structure
+            document.body.innerHTML = `
+                <div class="container">
+                    <h1>AI Interview Review</h1>
+                    
+                    <div class="review-content" id="reviewContent">Loading review...</div>
+                    
+                    <h2>Question-by-Question Analysis</h2>
+                    <div id="questionFeedback"></div>
+                    
+                    <h2>Emotion Analysis</h2>
+                    <div class="emotion-section">
+                        <div class="emotion-chart-container">
+                            <canvas id="emotionChart"></canvas>
+                        </div>
+                        <div class="emotion-description" id="emotionDescription">
+                            Analyzing your emotional expressions...
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Get review text and clean it
+            let reviewText = sessionStorage.getItem('interviewReview') || "No review available.";
+            reviewText = reviewText.replace(/\*\*/g, "");
+            document.getElementById('reviewContent').textContent = reviewText;
+            
+            // Get questions and answers
+            const questions = JSON.parse(sessionStorage.getItem('interviewQuestions') || '[]');
+            const answers = JSON.parse(sessionStorage.getItem('interviewAnswers') || '[]');
+            
+            // Display question feedback
+            const feedbackContainer = displayQuestionFeedback(questions, answers, reviewText);
+            document.getElementById('questionFeedback').appendChild(feedbackContainer);
+            
+            // Handle emotion data
+            const emotionDataString = sessionStorage.getItem('emotionData');
+            console.log('Raw emotion data from session storage:', emotionDataString);
+            
+            if (emotionDataString) {
+                try {
+                    const emotionData = JSON.parse(emotionDataString);
+                    console.log('Parsed emotion data:', emotionData);
+                    
+                    if (emotionData && emotionData.emotions && Object.keys(emotionData.emotions).length > 0) {
+                        console.log('Rendering emotion data:', emotionData.emotions);
+                        
+                        // Ensure all emotion values are numbers
+                        const processedEmotions = {};
+                        for (const [emotion, value] of Object.entries(emotionData.emotions)) {
+                            processedEmotions[emotion] = parseFloat(value) || 0;
+                        }
+                        
+                        // Render chart with processed emotions
+                        renderEmotionChart(processedEmotions);
+                        
+                        // Show dominant emotion description
+                        const dominantEmotion = getDominantEmotion(processedEmotions);
+                        console.log('Dominant emotion:', dominantEmotion);
+                        
+                        const descriptionElement = document.getElementById('emotionDescription');
+                        descriptionElement.innerHTML = `
+                            <span class="dominant-emotion">Dominant emotion: ${dominantEmotion}</span>
+                            <p>${getEmotionDescription(dominantEmotion)}</p>
+                        `;
+                    } else {
+                        console.warn('No emotions data in the parsed object');
+                        displayNoEmotionData();
+                    }
+                } catch (error) {
+                    console.error('Error parsing emotion data:', error);
+                    displayNoEmotionData();
+                }
+            } else {
+                console.warn('No emotion data found in session storage');
+                displayNoEmotionData();
+            }
+        };
+        
+        function displayNoEmotionData() {
+            document.getElementById('emotionChart').innerHTML = `<div class="no-data">No emotion data available</div>`;
+            document.getElementById('emotionDescription').innerHTML = `
+                <div class="no-data">
+                    <p>No emotion analysis data was captured during your interview.</p>
+                    <p>Make sure your camera is enabled for future interviews to receive feedback on your emotional expressions.</p>
+                </div>
+            `;
+        }
+    </script>
+</head>
+<body>
+    <!-- Content will be dynamically generated by JavaScript -->
+</body>
+</html>
+    
